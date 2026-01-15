@@ -2,6 +2,9 @@
 const KID_NAME = "Traveler";
 const SAVE_KEY = "traveler_space_arcade_v1";
 
+// NASA API key (DEMO_KEY is fine for testing; for reliability make a free key at api.nasa.gov) :contentReference[oaicite:2]{index=2}
+const NASA_KEY = "DEMO_KEY";
+
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
 const clamp = (n,a,b) => Math.max(a, Math.min(b, n));
@@ -18,7 +21,7 @@ function loadState(){
     if(!raw) throw 0;
     return JSON.parse(raw);
   }catch{
-    return { stars:0, badges:{}, bestMeteor:0 };
+    return { stars:0, badges:{}, bestMeteor:0, bestRocket:0 };
   }
 }
 function save(){
@@ -106,6 +109,11 @@ function setupTabs(){
       const t = btn.dataset.tab;
       $$(".panel").forEach(p=>p.classList.remove("active"));
       $(`#tab-${t}`).classList.add("active");
+
+      // Leaflet maps need a size invalidate after becoming visible
+      if(t === "iss" && issMap){
+        setTimeout(()=>{ try{ issMap.invalidateSize(); }catch{} }, 220);
+      }
     });
   });
 }
@@ -186,17 +194,26 @@ function renderHUD(){
   $("#badges").textContent = String(Object.keys(state.badges||{}).length);
   $("#subline").textContent = `Welcome, Commander ${KID_NAME} — tap a tab to play!`;
 }
+
 function renderBadges(){
   const grid = $("#badgeGrid");
+  if(!grid) return;
   grid.innerHTML = "";
+
   const defs = [
-    {k:"explorer", t:"🪐 Planet Explorer", d:"Clicked 3 planets"},
-    {k:"quiz",     t:"🧠 Planet Brain",   d:"Got a quiz right"},
-    {k:"hunter",   t:"🛸 Alien Hunter",   d:"Found 10 aliens"},
-    {k:"streak",   t:"🔥 Hot Streak",     d:"Alien streak of 5"},
-    {k:"meteor",   t:"☄️ Meteor Master",  d:"Catch 15 meteors"},
-    {k:"perfect",  t:"🏆 No Misses",      d:"Meteor round with 0 misses"},
+    {k:"explorer",   t:"🪐 Planet Explorer",  d:"Clicked 3 planets"},
+    {k:"quiz",       t:"🧠 Planet Brain",     d:"Got the planet quiz right"},
+    {k:"hunter",     t:"🛸 Alien Hunter",     d:"Found 10 aliens"},
+    {k:"streak",     t:"🔥 Hot Streak",       d:"Alien streak of 5"},
+    {k:"meteor",     t:"☄️ Meteor Master",    d:"Catch 15 meteors"},
+    {k:"perfect",    t:"🏆 No Misses",        d:"Meteor round with 0 misses"},
+    {k:"apod",       t:"📸 Cosmic Curator",   d:"Viewed a NASA space picture"},
+    {k:"iss",        t:"🛰️ Satellite Scout",  d:"Tracked the ISS"},
+    {k:"quizstreak", t:"🔥 Quiz Hot Streak",  d:"Got 8 quiz answers in a row"},
+    {k:"rocket50",   t:"🚀 Upper Atmosphere", d:"Rocket reached 50 km"},
+    {k:"rocket100",  t:"🌌 Space Bound",      d:"Rocket reached 100 km (space!)"},
   ];
+
   for(const b of defs){
     const owned = !!state.badges[b.k];
     const el = document.createElement("div");
@@ -213,19 +230,19 @@ function setupTop(){
     $("#soundBtn").textContent = soundOn ? "🔊 Sound: ON" : "🔇 Sound: OFF";
     beep(520,0.05,"square");
   });
+
   $("#ttsBtn").addEventListener("click", ()=>{
     ttsOn = !ttsOn;
     $("#ttsBtn").textContent = ttsOn ? "🗣️ Read: ON" : "🙊 Read: OFF";
     beep(330,0.05,"triangle");
   });
+
   $("#resetAll").addEventListener("click", ()=>{
     localStorage.removeItem(SAVE_KEY);
     location.reload();
   });
-  $("#resetAll").classList.add("danger");
 
-  // disco mode is just a fun visual
-  $("#resetAll").parentElement.insertAdjacentHTML("beforebegin", "");
+  $("#resetAll").classList.add("danger");
 }
 
 // ---------- PLANET EXPLORER ----------
@@ -259,28 +276,20 @@ function setupPlanets(){
     selectPlanet(p.id, true);
   });
 
+  // Replace old "type answer" with: jump to the quiz tab (kid-friendly)
   $("#planetQuiz").addEventListener("click", ()=>{
-    const p = PLANETS[(Math.random()*PLANETS.length)|0];
-    const question = `Which planet has rings?`;
-    const correct = "Saturn";
-    const guess = prompt(question + "\n(Type your answer, like: Saturn)");
-    if(!guess) return;
-    if(guess.trim().toLowerCase() === correct.toLowerCase()){
-      $("#planetNote").textContent = "Correct! 🎉 You’re a space genius!";
-      addStars(5);
-      unlock("quiz","🧠 Planet Brain","Got a quiz right");
-      say("Correct! Saturn has rings!");
-      confetti(50);
-      beep(660,0.06,"triangle"); beep(880,0.08,"triangle");
-    }else{
-      $("#planetNote").textContent = `Nice try! The answer was ${correct}.`;
-      say(`Nice try! The answer was Saturn.`);
-      beep(180,0.08,"sawtooth");
-    }
+    beep(660,0.06,"triangle");
+    say("Space quiz time!");
+    openTab("quiz");
   });
 
   // default
   selectPlanet("saturn", false);
+}
+
+function openTab(tabName){
+  const btn = $(`.tab[data-tab="${tabName}"]`);
+  if(btn) btn.click();
 }
 
 function selectPlanet(id, reward){
@@ -524,14 +533,516 @@ function endMeteorRound(){
   }
 }
 
+// ================================
+// NASA PICS (APOD)
+// ================================
+let lastApodSpeak = "";
+
+async function fetchApod(dateStr=null){
+  const url = new URL("https://api.nasa.gov/planetary/apod");
+  url.searchParams.set("api_key", NASA_KEY);
+  if(dateStr) url.searchParams.set("date", dateStr);
+
+  // Note: Some browsers/environments can still hit CORS limits from static sites.
+  // If you ever see CORS errors, switch to a simple proxy (Cloudflare Worker / Netlify function),
+  // or just add your own NASA key (helps reliability). :contentReference[oaicite:3]{index=3}
+  const res = await fetch(url.toString());
+  if(!res.ok) throw new Error("APOD fetch failed");
+  return await res.json();
+}
+
+function randomApodDate(){
+  const start = new Date("1995-06-16T00:00:00");
+  const end = new Date();
+  const t = start.getTime() + Math.random() * (end.getTime() - start.getTime());
+  const d = new Date(t);
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth()+1).padStart(2,"0");
+  const dd = String(d.getDate()).padStart(2,"0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function kidifyApod(title, explanation){
+  const short = (explanation || "")
+    .replace(/\s+/g," ")
+    .slice(0, 260);
+  return `This space picture is called: ${title}. Here’s the fun part: ${short}${short.endsWith(".") ? "" : "…"} `;
+}
+
+function renderApod(d){
+  const media = $("#apodMedia");
+  if(!media) return;
+
+  $("#apodTitle").textContent = d.title || "NASA Space Pic";
+  $("#apodMeta").textContent = d.date ? `📅 ${d.date}` : "";
+
+  const kidText = kidifyApod(d.title, d.explanation);
+  $("#apodKid").textContent = kidText;
+  lastApodSpeak = kidText;
+
+  media.innerHTML = "";
+  if(d.media_type === "video" && d.url){
+    const iframe = document.createElement("iframe");
+    iframe.src = d.url;
+    iframe.title = d.title || "NASA Video";
+    iframe.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture";
+    iframe.referrerPolicy = "no-referrer";
+    iframe.style.border = "0";
+    media.appendChild(iframe);
+  } else if(d.url){
+    const img = document.createElement("img");
+    img.src = d.hdurl || d.url;
+    img.alt = d.title || "NASA APOD";
+    img.loading = "lazy";
+    media.appendChild(img);
+  } else {
+    media.textContent = "No NASA picture available today.";
+  }
+
+  addStars(2);
+  unlock("apod","📸 Cosmic Curator","Viewed a NASA space picture");
+}
+
+function setupApodUI(){
+  const btnToday = $("#apodToday");
+  const btnRandom = $("#apodRandom");
+  const btnRead = $("#apodRead");
+  if(!btnToday) return;
+
+  btnToday.addEventListener("click", async ()=>{
+    beep(660,0.06,"triangle");
+    $("#apodMedia").textContent = "Loading NASA picture…";
+    try{ renderApod(await fetchApod()); }
+    catch{
+      $("#apodMedia").textContent = "NASA is busy (or blocked). Try Random!";
+      $("#apodKid").textContent = "If this keeps happening, you may be hitting a browser CORS limit on static sites.";
+    }
+  });
+
+  btnRandom.addEventListener("click", async ()=>{
+    beep(784,0.06,"triangle");
+    const date = randomApodDate();
+    $("#apodMedia").textContent = `Jumping to ${date}…`;
+    try{ renderApod(await fetchApod(date)); confetti(18); }
+    catch{
+      $("#apodMedia").textContent = "Random jump failed. Try again!";
+    }
+  });
+
+  btnRead.addEventListener("click", ()=>{
+    beep(523,0.06,"sine");
+    say(lastApodSpeak || `Hi ${KID_NAME}! Let’s look at space pictures!`);
+  });
+
+  // auto-load once
+  btnToday.click();
+}
+
+// ================================
+// ISS TRACKER (Leaflet map) — HTTPS via wheretheiss.at :contentReference[oaicite:4]{index=4}
+// ================================
+let issMap, issMarker, issAutoOn=false, issTimer=null;
+
+function setupIss(){
+  const mapEl = $("#issMap");
+  if(!mapEl || typeof L === "undefined") return;
+
+  issMap = L.map("issMap", { worldCopyJump:true }).setView([0,0], 2);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 7,
+    attribution: "&copy; OpenStreetMap contributors"
+  }).addTo(issMap);
+
+  issMarker = L.marker([0,0], {
+    icon: L.divIcon({
+      className: "issIcon",
+      html: `<div style="width:34px;height:34px;border-radius:999px;
+        background:rgba(96,165,250,.25);
+        border:2px solid rgba(96,165,250,.8);
+        display:grid;place-items:center;font-weight:950;">🛰️</div>`,
+      iconSize:[34,34],
+      iconAnchor:[17,17]
+    })
+  }).addTo(issMap);
+
+  async function ping(){
+    // HTTPS endpoint safe for GitHub Pages
+    const res = await fetch("https://api.wheretheiss.at/v1/satellites/25544");
+    if(!res.ok) throw new Error("ISS fetch failed");
+    const data = await res.json();
+
+    const lat = Number(data.latitude);
+    const lon = Number(data.longitude);
+
+    $("#issLat").textContent = lat.toFixed(3);
+    $("#issLon").textContent = lon.toFixed(3);
+    $("#issTime").textContent = new Date().toLocaleTimeString([], { hour:"2-digit", minute:"2-digit" });
+
+    issMarker.setLatLng([lat, lon]);
+    issMap.panTo([lat, lon], { animate:true, duration: 0.6 });
+
+    $("#issMsg").textContent = "There it is! The ISS is zooming around Earth!";
+    addStars(2);
+    unlock("iss","🛰️ Satellite Scout","Tracked the space station");
+    beep(392,0.05,"square"); setTimeout(()=>beep(523,0.05,"square"),60);
+  }
+
+  $("#issPing").addEventListener("click", ()=> ping().catch(()=>{
+    $("#issMsg").textContent = "ISS ping failed. Try again!";
+  }));
+
+  $("#issAuto").addEventListener("click", async ()=>{
+    issAutoOn = !issAutoOn;
+    $("#issAuto").textContent = issAutoOn ? "Auto: ON" : "Auto: OFF";
+    beep(330,0.06,"triangle");
+
+    if(issAutoOn){
+      $("#issMsg").textContent = "Auto mode ON — watch it move!";
+      await ping().catch(()=>{});
+      issTimer = setInterval(()=> ping().catch(()=>{}), 6000);
+    } else {
+      clearInterval(issTimer);
+      issTimer = null;
+      $("#issMsg").textContent = "Auto mode OFF.";
+    }
+  });
+
+  // initial ping (map might still be hidden; tabs handler will invalidate size)
+  ping().catch(()=>{});
+}
+
+// ================================
+// MULTIPLE CHOICE SPACE QUIZ
+// ================================
+const QUIZ = [
+  { q:"What is the Sun?", a:["A planet","A star","A moon","A spaceship"], c:1 },
+  { q:"Which planet is the Red Planet?", a:["Mars","Neptune","Jupiter","Venus"], c:0 },
+  { q:"What do we call Earth’s moon?", a:["Luna","Sol","Titan","Phobos"], c:0 },
+  { q:"Which planet has rings?", a:["Earth","Saturn","Mercury","Mars"], c:1 },
+  { q:"Which planet is the biggest?", a:["Jupiter","Mars","Earth","Venus"], c:0 },
+  { q:"What do astronauts wear in space?", a:["Raincoat","Space suit","Pajamas","Soccer jersey"], c:1 },
+  { q:"Where do astronauts live in space?", a:["ISS","Underwater","On the Sun","In a cave"], c:0 },
+  { q:"What do rockets push out to go up?", a:["Cookies","Exhaust gas","Clouds","Leaves"], c:1 },
+  { q:"What is a telescope for?", a:["Seeing far things","Cooking","Driving","Swimming"], c:0 },
+  { q:"What shape is Earth?", a:["Flat","Round-ish","Triangle","Square"], c:1 },
+  { q:"Which is a planet?", a:["Saturn","Spoon","Sock","Sandwich"], c:0 },
+  { q:"What’s in the Milky Way?", a:["Lots of stars","Only one star","Only water","Only robots"], c:0 },
+  { q:"What is a comet?", a:["Icy space rock","A puppy","A plane","A volcano"], c:0 },
+  { q:"What is an astronaut?", a:["Space explorer","Chef","Race car","Dinosaur"], c:0 },
+  { q:"What do we call a big group of stars that makes a picture?", a:["Constellation","Sandcastle","Volcano","Elevator"], c:0 },
+  { q:"Which planet is closest to the Sun?", a:["Mercury","Mars","Saturn","Neptune"], c:0 },
+  { q:"What is gravity?", a:["A pulling force","A snack","A song","A spaceship"], c:0 },
+  { q:"Which is a galaxy?", a:["Milky Way","Mount Everest","Pacific Ocean","Grand Canyon"], c:0 },
+  { q:"What is a meteor?", a:["Rock burning in air","A fish","A cloud","A tree"], c:0 },
+  { q:"What is the Moon?", a:["A planet","A star","A natural satellite","A rocket"], c:2 },
+];
+
+let qScore=0, qStreak=0, qStars=0;
+let currentQ=null;
+
+function shuffle(arr){
+  for(let i=arr.length-1;i>0;i--){
+    const j = (Math.random()*(i+1))|0;
+    [arr[i],arr[j]]=[arr[j],arr[i]];
+  }
+  return arr;
+}
+
+function pickQuestion(){
+  currentQ = QUIZ[(Math.random()*QUIZ.length)|0];
+  $("#qText").textContent = currentQ.q;
+  $("#qMsg").textContent = "Pick an answer!";
+
+  const answers = currentQ.a.map((txt, idx)=>({txt, idx}));
+  shuffle(answers);
+
+  const wrap = $("#qAnswers");
+  wrap.innerHTML = "";
+  answers.forEach(({txt, idx})=>{
+    const b = document.createElement("button");
+    b.className = "answerBtn";
+    b.textContent = txt;
+    b.addEventListener("click", ()=> answerQuestion(idx, b));
+    wrap.appendChild(b);
+  });
+}
+
+function answerQuestion(chosenIdx, btn){
+  const buttons = $$("#qAnswers .answerBtn");
+  buttons.forEach(b=>b.disabled = true);
+
+  if(chosenIdx === currentQ.c){
+    btn.classList.add("correct");
+    qScore++; qStreak++;
+    const starGain = (qStreak >= 5 ? 3 : 1); // streak bonus
+    qStars += starGain;
+    addStars(starGain);
+    confetti(20);
+    beep(660,0.06,"triangle"); setTimeout(()=>beep(880,0.08,"triangle"),80);
+
+    $("#qMsg").textContent = qStreak >= 5
+      ? `SUPER STREAK! 🔥 ${qStreak} in a row!`
+      : "Correct! ⭐";
+
+    if(qStreak >= 8) unlock("quizstreak","🔥 Quiz Hot Streak","Got 8 quiz answers in a row");
+    if(qScore === 1) unlock("quiz","🧠 Planet Brain","Got a quiz right");
+  } else {
+    btn.classList.add("wrong");
+    qStreak = 0;
+    beep(180,0.08,"sawtooth");
+    $("#qMsg").textContent = `Nice try! The right answer was: ${currentQ.a[currentQ.c]}`;
+    buttons.forEach(b=>{
+      if(b.textContent === currentQ.a[currentQ.c]) b.classList.add("correct");
+    });
+  }
+
+  $("#qScore").textContent = String(qScore);
+  $("#qStreak").textContent = String(qStreak);
+  $("#qStars").textContent = String(qStars);
+
+  setTimeout(pickQuestion, 1200);
+}
+
+function setupQuiz(){
+  if(!$("#qNew")) return;
+  $("#qNew").addEventListener("click", ()=>{ beep(523,0.06,"square"); pickQuestion(); });
+  $("#qReset").addEventListener("click", ()=>{
+    qScore=0; qStreak=0; qStars=0;
+    $("#qScore").textContent="0";
+    $("#qStreak").textContent="0";
+    $("#qStars").textContent="0";
+    $("#qMsg").textContent="Quiz reset! Let’s go!";
+    confetti(15);
+    beep(330,0.06,"triangle");
+    pickQuestion();
+  });
+  pickQuestion();
+}
+
+// ================================
+// ROCKET LAUNCH MINI-GAME
+// Hold to fuel, then launch — altitude + best record
+// ================================
+let rocketFuel = 0;
+let fueling = false;
+let rocketLaunched = false;
+let rocketAlt = 0;
+let rocketVel = 0;
+let rocketBest = 0;
+let rocketRAF = null;
+let rocketFuelTimer = null;
+
+function setupRocket(){
+  if(!$("#rocketStart")) return;
+
+  rocketBest = state.bestRocket || 0;
+  $("#rocketBest").textContent = String(rocketBest);
+
+  $("#rocketStart").addEventListener("click", ()=>{
+    resetRocketRound();
+    $("#rocketMsg").textContent = "Hold Fuel to fill the tank, then press Launch!";
+    say("Rocket ready. Hold to fuel, then launch!");
+    beep(523,0.06,"triangle");
+  });
+
+  // Hold-to-fuel on mouse/touch/pointer
+  const holdBtn = $("#rocketHold");
+  const startFuel = ()=>{
+    if(rocketLaunched) return;
+    fueling = true;
+    $("#rocketMsg").textContent = "Fueling… keep holding!";
+    igniteRocket(false);
+
+    if(rocketFuelTimer) clearInterval(rocketFuelTimer);
+    rocketFuelTimer = setInterval(()=>{
+      if(!fueling) return;
+      rocketFuel = clamp(rocketFuel + 2.2, 0, 100);
+      updateFuelUI();
+      if(rocketFuel >= 100){
+        fueling = false;
+        $("#rocketMsg").textContent = "Tank full! Press Launch! 🚀";
+        beep(880,0.08,"triangle");
+        confetti(12);
+        clearInterval(rocketFuelTimer);
+        rocketFuelTimer = null;
+      } else {
+        beep(220 + rocketFuel*2, 0.02, "sine");
+      }
+    }, 90);
+  };
+
+  const stopFuel = ()=>{
+    fueling = false;
+    if(rocketFuelTimer) clearInterval(rocketFuelTimer);
+    rocketFuelTimer = null;
+    if(!rocketLaunched) $("#rocketMsg").textContent = "Fuel paused. Hold again or press Launch.";
+  };
+
+  holdBtn.addEventListener("pointerdown", (e)=>{ e.preventDefault(); startFuel(); });
+  holdBtn.addEventListener("pointerup", stopFuel);
+  holdBtn.addEventListener("pointercancel", stopFuel);
+  holdBtn.addEventListener("pointerleave", stopFuel);
+
+  $("#rocketLaunch").addEventListener("click", ()=>{
+    if(rocketLaunched) return;
+    if(rocketFuel < 10){
+      $("#rocketMsg").textContent = "Need more fuel! Hold Fuel first. ⛽";
+      beep(180,0.07,"sawtooth");
+      return;
+    }
+    launchRocket();
+  });
+
+  $("#rocketAbort").addEventListener("click", ()=>{
+    abortRocket();
+  });
+
+  // initialize UI
+  updateFuelUI();
+  updateRocketUI();
+}
+
+function updateFuelUI(){
+  $("#rocketFuelText").textContent = String(Math.round(rocketFuel));
+  const bar = $("#fuelBar");
+  if(bar) bar.style.width = `${rocketFuel}%`;
+}
+
+function updateRocketUI(){
+  $("#rocketAlt").textContent = String(Math.max(0, Math.round(rocketAlt)));
+  $("#rocketBest").textContent = String(Math.round(rocketBest));
+}
+
+function igniteRocket(on){
+  const rocket = $("#rocketReal");
+  if(!rocket) return;
+  rocket.classList.toggle("rocketIgnite", !!on);
+}
+
+function resetRocketRound(){
+  rocketFuel = 0;
+  fueling = false;
+  rocketLaunched = false;
+  rocketAlt = 0;
+  rocketVel = 0;
+  updateFuelUI();
+  updateRocketUI();
+
+  const rocket = $("#rocketReal");
+  if(rocket){
+    rocket.style.transform = "translateX(-50%) translateY(0px)";
+  }
+  igniteRocket(false);
+
+  if(rocketRAF) cancelAnimationFrame(rocketRAF);
+  rocketRAF = null;
+
+  if(rocketFuelTimer) clearInterval(rocketFuelTimer);
+  rocketFuelTimer = null;
+}
+
+function abortRocket(){
+  resetRocketRound();
+  $("#rocketMsg").textContent = "Abort! Rocket reset. Try again.";
+  beep(220,0.08,"square");
+}
+
+function launchRocket(){
+  rocketLaunched = true;
+  fueling = false;
+  if(rocketFuelTimer) clearInterval(rocketFuelTimer);
+  rocketFuelTimer = null;
+
+  // Physics-ish: fuel becomes initial thrust/velocity
+  rocketVel = 0.9 + (rocketFuel / 12); // km per tick-ish
+  const fuelBurn = rocketFuel; // keep for scoring
+  rocketFuel = 0;
+  updateFuelUI();
+
+  $("#rocketMsg").textContent = "LAUNCH! 🚀🚀🚀";
+  say("Launch!");
+  confetti(30);
+  beep(330,0.08,"triangle"); setTimeout(()=>beep(494,0.08,"triangle"),80); setTimeout(()=>beep(659,0.10,"triangle"),160);
+
+  igniteRocket(true);
+
+  const rocket = $("#rocketReal");
+  let last = performance.now();
+
+  function step(now){
+    const dt = clamp((now - last) / 16.67, 0.6, 2.2);
+    last = now;
+
+    // thrust decays + gravity drag
+    rocketVel *= (1 - 0.006*dt);   // air resistance
+    rocketVel -= 0.03*dt;          // gravity-ish
+    rocketAlt += rocketVel * dt;
+
+    if(rocket){
+      // visual translate: altitude -> pixels (cap to keep in frame)
+      const px = clamp(rocketAlt * 2.2, 0, 300);
+      rocket.style.transform = `translateX(-50%) translateY(${-px}px)`;
+    }
+
+    updateRocketUI();
+
+    // milestones / rewards
+    if(rocketAlt >= 50) unlock("rocket50","🚀 Upper Atmosphere","Rocket reached 50 km");
+    if(rocketAlt >= 100) unlock("rocket100","🌌 Space Bound","Rocket reached 100 km (space!)");
+
+    // keep running while moving upward or still above ground slightly
+    if(rocketAlt > 0 && rocketVel > -0.4){
+      rocketRAF = requestAnimationFrame(step);
+      return;
+    }
+
+    // end of flight
+    igniteRocket(false);
+    rocketAlt = Math.max(0, rocketAlt);
+    updateRocketUI();
+
+    const finalAlt = Math.round(Math.max(0, rocketAlt));
+    $("#rocketMsg").textContent =
+      finalAlt >= 100 ? `YOU REACHED SPACE! 🌌 (${finalAlt} km)` :
+      finalAlt >= 50  ? `Great flight! (${finalAlt} km)` :
+                        `Nice launch! (${finalAlt} km) Try more fuel!`;
+
+    // Stars for effort (scaled gently)
+    const starGain = clamp(Math.round(finalAlt / 25), 1, 8);
+    addStars(starGain);
+
+    // Best record
+    if(finalAlt > rocketBest){
+      rocketBest = finalAlt;
+      state.bestRocket = rocketBest;
+      save();
+      confetti(60);
+      beep(660,0.06,"triangle"); setTimeout(()=>beep(880,0.08,"triangle"),80);
+    }
+
+    // small extra reward if he fueled a lot
+    if(fuelBurn >= 80) addStars(1);
+
+    rocketLaunched = false;
+    rocketVel = 0;
+    rocketRAF = null;
+  }
+
+  rocketRAF = requestAnimationFrame(step);
+}
+
 // ---------- INIT ----------
 function init(){
   setupTabs();
   setupBG();
   setupTop();
   setupPlanets();
+  setupRocket();
   setupAliens();
   setupMeteors();
+  setupApodUI();
+  setupIss();
+  setupQuiz();
 
   // disco button (simple class toggle)
   const disco = document.createElement("button");
@@ -540,21 +1051,14 @@ function init(){
   disco.addEventListener("click", ()=>{
     document.body.classList.toggle("disco");
     confetti(30);
-    beep(330,0.06,"triangle"); setTimeout(()=>beep(392,0.06,"triangle"),70); setTimeout(()=>beep(494,0.08,"triangle"),140);
-  });
-  $(".hud").insertBefore(disco, $("#resetAll"));
-
-  $("#soundBtn").addEventListener("click", ()=>{
-    soundOn = !soundOn;
-    $("#soundBtn").textContent = soundOn ? "🔊 Sound: ON" : "🔇 Sound: OFF";
-    beep(520,0.05,"square");
+    beep(330,0.06,"triangle");
+    setTimeout(()=>beep(392,0.06,"triangle"),70);
+    setTimeout(()=>beep(494,0.08,"triangle"),140);
   });
 
-  $("#ttsBtn").addEventListener("click", ()=>{
-    ttsOn = !ttsOn;
-    $("#ttsBtn").textContent = ttsOn ? "🗣️ Read: ON" : "🙊 Read: OFF";
-    beep(330,0.05,"triangle");
-  });
+  // Put disco at the front of the HUD
+  const hud = document.querySelector(".hud");
+  if(hud) hud.insertBefore(disco, $("#soundBtn"));
 
   renderHUD();
   renderBadges();
