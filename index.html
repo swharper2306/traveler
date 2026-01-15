@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Traveler’s Space Arcade 🚀</title>
-  <meta name="description" content="A space-themed arcade for Traveler: planets, aliens, meteors, badges." />
+  <meta name="description" content="A space-themed arcade for Traveler: planets, ISS tracker, docking, NASA pics, and missions." />
   <link rel="stylesheet" href="./styles.css" />
 
   <!-- Leaflet (for ISS Tracker map) -->
@@ -34,13 +34,15 @@
 
   <nav class="tabs" aria-label="Games">
     <button class="tab active" data-tab="planets">🪐 Planets</button>
-    <button class="tab" data-tab="rocket">🚀 Rocket Launch</button>
-    <button class="tab" data-tab="aliens">🛸 Alien Hunt</button>
-    <button class="tab" data-tab="meteors">☄️ Meteor Catch</button>
-    <button class="tab" data-tab="nasa">📸 NASA Pics</button>
     <button class="tab" data-tab="iss">🛰️ ISS Tracker</button>
+    <button class="tab" data-tab="dock">🧩 ISS Docking</button>
+    <button class="tab" data-tab="nasa">📸 NASA Pics</button>
+    <button class="tab" data-tab="missions">🎯 Missions</button>
+    <button class="tab" data-tab="rocket">🚀 Rocket Launch</button>
     <button class="tab" data-tab="quiz">🧠 Space Quiz</button>
     <button class="tab" data-tab="trophy">🏆 Trophy Room</button>
+
+    <!-- Hidden legacy tabs removed (Aliens/Meteors) -->
   </nav>
 
   <main class="wrap">
@@ -61,116 +63,123 @@
         <div class="card">
           <h3 id="planetName">Pick a planet!</h3>
           <p class="fact" id="planetFact">Tap a planet on the left. Traveler earns ⭐ for exploring!</p>
-          <div class="row">
+
+          <!-- NEW: Stat bars placeholder (we’ll wire these in app.js next) -->
+          <div class="statsRow" style="margin-top:10px;">
+            <div class="pill">🌡️ Temp: <span id="pTemp">—</span></div>
+            <div class="pill">🧲 Gravity: <span id="pGrav">—</span></div>
+            <div class="pill">🌙 Moons: <span id="pMoons">—</span></div>
+          </div>
+
+          <div class="row" style="margin-top:10px;">
             <button class="btn" id="randomPlanet">🎲 Random Planet</button>
+            <button class="btn" id="planetDiscover">✨ Discover</button>
             <button class="btn" id="planetQuiz">🧠 Quick Quiz</button>
           </div>
+
           <div class="note" id="planetNote">Tip: Try Saturn 🪐 or Mars 🔴</div>
         </div>
       </div>
     </section>
 
-    <!-- ROCKET LAUNCH -->
-    <section class="panel" id="tab-rocket">
+    <!-- ISS TRACKER -->
+    <section class="panel" id="tab-iss">
       <div class="panelHead">
-        <h2>Rocket Launch</h2>
-        <div class="panelHint">Hold to fuel ⛽ then LAUNCH 🚀 — reach space for big rewards!</div>
+        <h2>Where is the ISS right now?</h2>
+        <div class="panelHint">Ping it to watch it move around Earth</div>
       </div>
 
       <div class="grid2">
+        <div class="card arenaCard">
+          <div id="issMap" class="map"></div>
+        </div>
+
         <div class="card">
-          <div class="row">
-            <button class="btn" id="rocketStart">▶️ Start</button>
-            <button class="btn" id="rocketHold">⛽ Hold to Fuel</button>
-            <button class="btn" id="rocketLaunch">🔥 Launch</button>
-            <button class="btn" id="rocketAbort">🛑 Abort</button>
+          <h3>What is the ISS?</h3>
+
+          <!-- NASA public domain image (static). If you want a different one, tell me and I’ll swap it. -->
+          <div class="media" style="border-radius:14px; overflow:hidden; border:1px solid rgba(255,255,255,.10); background:rgba(0,0,0,.18);">
+            <img
+              src="https://www.nasa.gov/wp-content/uploads/2023/03/iss_0.jpg"
+              alt="The International Space Station"
+              style="width:100%; height:220px; object-fit:cover; display:block;"
+              loading="lazy"
+              referrerpolicy="no-referrer"
+            />
+          </div>
+
+          <p class="fact" style="margin-top:10px;">
+            The ISS (International Space Station) is a giant science lab in space. Astronauts live there,
+            do experiments, and it zooms around Earth again and again!
+          </p>
+
+          <div class="row" style="margin-top:10px;">
+            <button class="btn" id="issPing">Ping ISS</button>
+            <button class="btn" id="issAuto">Auto: OFF</button>
+            <button class="btn" id="issRead">🔈 Read</button>
           </div>
 
           <div class="statsRow" style="margin-top:12px;">
-            <div class="pill">⛽ Fuel: <span id="rocketFuelText">0</span>%</div>
-            <div class="pill">📈 Altitude: <span id="rocketAlt">0</span> km</div>
-            <div class="pill">🏁 Best: <span id="rocketBest">0</span> km</div>
+            <div class="pill">📍 Lat: <span id="issLat">—</span></div>
+            <div class="pill">📍 Lon: <span id="issLon">—</span></div>
+            <div class="pill">⏱️ Updated: <span id="issTime">—</span></div>
           </div>
 
-          <div class="note" id="rocketMsg">Press Start. Then hold Fuel to fill the tank!</div>
-
-          <div class="fuelBarWrap" aria-label="Fuel gauge">
-            <div class="fuelBar" id="fuelBar"></div>
+          <!-- NEW: extra stats placeholders (we’ll fill these in app.js next) -->
+          <div class="statsRow" style="margin-top:10px;">
+            <div class="pill">🛰️ Alt: <span id="issAlt">—</span> km</div>
+            <div class="pill">⚡ Speed: <span id="issVel">—</span> km/h</div>
+            <div class="pill">🔁 Orbits/day: <span id="issOrbits">—</span></div>
           </div>
-        </div>
 
-        <div class="card arenaCard">
-          <div class="launchPad" id="launchPad" aria-label="Rocket launch pad">
-            <!-- “Realistic-ish” rocket built from simple shapes (CSS will style this later) -->
-            <div class="rocketReal" id="rocketReal" aria-label="Rocket">
-              <div class="rr-nose"></div>
-              <div class="rr-body">
-                <div class="rr-flag"></div>
-                <div class="rr-window"></div>
-              </div>
-              <div class="rr-engine"></div>
-              <div class="rr-flame" id="rocketFlame"></div>
-              <div class="rr-smoke" id="rocketSmoke"></div>
-            </div>
-
-            <div class="skyline" aria-hidden="true"></div>
-          </div>
+          <div class="note" id="issMsg">Ping it to locate the space station!</div>
         </div>
       </div>
     </section>
 
-    <!-- ALIENS -->
-    <section class="panel" id="tab-aliens">
+    <!-- ISS DOCKING (NEW MAIN GAME UI) -->
+    <section class="panel" id="tab-dock">
       <div class="panelHead">
-        <h2>Alien Hide-and-Seek</h2>
-        <div class="panelHint">Tap aliens fast before they teleport!</div>
+        <h2>ISS Docking</h2>
+        <div class="panelHint">Line up + go slow… dock like a real astronaut!</div>
       </div>
 
       <div class="grid2">
         <div class="card">
           <div class="row">
-            <button class="btn" id="alienStart">▶️ Start</button>
-            <button class="btn" id="alienHard">🔥 Harder</button>
-            <button class="btn" id="alienEasy">😌 Easier</button>
+            <button class="btn" id="dockStart">▶️ Start Docking</button>
+            <button class="btn" id="dockLeft">⬅️ Left</button>
+            <button class="btn" id="dockRight">Right ➡️</button>
+            <button class="btn" id="dockSlow">🐢 Slow</button>
+            <button class="btn" id="dockBoost">⚡ Boost</button>
+            <button class="btn danger" id="dockReset">♻️ Reset</button>
           </div>
-          <div class="note" id="alienMsg">Press Start to begin hunting!</div>
-          <div class="statsRow">
-            <div class="pill">👽 Found: <span id="alienFound">0</span></div>
-            <div class="pill">⏱️ Time: <span id="alienTime">0</span>s</div>
-            <div class="pill">🔥 Streak: <span id="alienStreak">0</span></div>
+
+          <div class="statsRow" style="margin-top:12px;">
+            <div class="pill">📏 Distance: <span id="dockDist">—</span></div>
+            <div class="pill">🎯 Alignment: <span id="dockAlign">—</span></div>
+            <div class="pill">💨 Speed: <span id="dockSpeed">—</span></div>
+            <div class="pill">🏆 Best: <span id="dockBest">—</span></div>
+          </div>
+
+          <div class="note" id="dockMsg">
+            Goal: match the docking lane and approach slowly. Too fast = bump!
+          </div>
+
+          <div class="note" style="opacity:.9;">
+            Tip: “Slow + lined up” is the secret. 🚀
           </div>
         </div>
 
         <div class="card arenaCard">
-          <div class="arena" id="arena" aria-label="Alien arena"></div>
-        </div>
-      </div>
-    </section>
+          <div class="arena" id="dockArena" aria-label="Docking arena">
+            <!-- We’ll animate these with CSS/JS next -->
+            <div id="dockISS" style="position:absolute; left:50%; top:70px; transform:translateX(-50%); font-size:64px;">🛰️</div>
+            <div id="dockShip" style="position:absolute; left:50%; bottom:40px; transform:translateX(-50%); font-size:52px;">🚀</div>
 
-    <!-- METEORS -->
-    <section class="panel" id="tab-meteors">
-      <div class="panelHead">
-        <h2>Meteor Catch</h2>
-        <div class="panelHint">Tap meteors before they hit the ground!</div>
-      </div>
-
-      <div class="grid2">
-        <div class="card">
-          <div class="row">
-            <button class="btn" id="meteorStart">▶️ Start</button>
-            <button class="btn" id="meteorStop">⏹️ Stop</button>
-            <button class="btn" id="meteorBoost">⚡ Turbo</button>
+            <!-- lane guide -->
+            <div id="dockLane" style="position:absolute; left:50%; top:0; bottom:0; width:0; border-left:2px dashed rgba(96,165,250,.35); transform:translateX(-50%);"></div>
           </div>
-          <div class="statsRow">
-            <div class="pill">☄️ Caught: <span id="mCaught">0</span></div>
-            <div class="pill">💥 Missed: <span id="mMissed">0</span></div>
-            <div class="pill">🏆 Best: <span id="mBest">0</span></div>
-          </div>
-          <div class="note" id="meteorMsg">Start the game and tap falling meteors!</div>
-        </div>
-
-        <div class="card arenaCard">
-          <div class="meteorField" id="meteorField" aria-label="Meteor field"></div>
         </div>
       </div>
     </section>
@@ -206,31 +215,84 @@
       </div>
     </section>
 
-    <!-- ISS TRACKER -->
-    <section class="panel" id="tab-iss">
+    <!-- MISSIONS (NEW) -->
+    <section class="panel" id="tab-missions">
       <div class="panelHead">
-        <h2>Where is the ISS right now?</h2>
-        <div class="panelHint">Tap Ping to see it move (Auto mode is fun!)</div>
+        <h2>Mission Board</h2>
+        <div class="panelHint">Complete missions to earn ⭐ and badges 🏅</div>
       </div>
 
       <div class="grid2">
-        <div class="card arenaCard">
-          <div id="issMap" class="map"></div>
+        <div class="card">
+          <h3>Traveler’s Missions</h3>
+          <div class="note" id="missionMsg">Complete missions to unlock rewards!</div>
+
+          <!-- We’ll render mission checklist via app.js next -->
+          <div id="missionList" style="margin-top:12px;"></div>
+
+          <div class="row" style="margin-top:12px;">
+            <button class="btn" id="missionRead">🔈 Read Missions</button>
+            <button class="btn danger" id="missionReset">♻️ Reset Missions</button>
+          </div>
         </div>
 
         <div class="card">
+          <h3>How to Win</h3>
+          <ul class="list">
+            <li>🛰️ Track the ISS (Ping it!)</li>
+            <li>🧩 Dock your ship to the ISS</li>
+            <li>🪐 Explore planets and discover facts</li>
+            <li>📸 View NASA pictures</li>
+            <li>🚀 Improve your rocket launches</li>
+          </ul>
+          <div class="note">This is what makes the site “stick”: goals + rewards.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ROCKET LAUNCH -->
+    <section class="panel" id="tab-rocket">
+      <div class="panelHead">
+        <h2>Rocket Launch</h2>
+        <div class="panelHint">Hold to fuel ⛽ then LAUNCH 🚀</div>
+      </div>
+
+      <div class="grid2">
+        <div class="card">
           <div class="row">
-            <button class="btn" id="issPing">Ping ISS</button>
-            <button class="btn" id="issAuto">Auto: OFF</button>
+            <button class="btn" id="rocketStart">▶️ Start</button>
+            <button class="btn" id="rocketHold">⛽ Hold to Fuel</button>
+            <button class="btn" id="rocketLaunch">🔥 Launch</button>
+            <button class="btn" id="rocketAbort">🛑 Abort</button>
           </div>
 
           <div class="statsRow" style="margin-top:12px;">
-            <div class="pill">📍 Lat: <span id="issLat">—</span></div>
-            <div class="pill">📍 Lon: <span id="issLon">—</span></div>
-            <div class="pill">⏱️ Updated: <span id="issTime">—</span></div>
+            <div class="pill">⛽ Fuel: <span id="rocketFuelText">0</span>%</div>
+            <div class="pill">📈 Altitude: <span id="rocketAlt">0</span> km</div>
+            <div class="pill">🏁 Best: <span id="rocketBest">0</span> km</div>
           </div>
 
-          <div class="note" id="issMsg">Ping it to locate the space station!</div>
+          <div class="note" id="rocketMsg">Press Start. Then hold Fuel to fill the tank!</div>
+
+          <div class="fuelBarWrap" aria-label="Fuel gauge">
+            <div class="fuelBar" id="fuelBar"></div>
+          </div>
+        </div>
+
+        <div class="card arenaCard">
+          <div class="launchPad" id="launchPad" aria-label="Rocket launch pad">
+            <div class="rocketReal" id="rocketReal" aria-label="Rocket">
+              <div class="rr-nose"></div>
+              <div class="rr-body">
+                <div class="rr-flag"></div>
+                <div class="rr-window"></div>
+              </div>
+              <div class="rr-engine"></div>
+              <div class="rr-flame" id="rocketFlame"></div>
+              <div class="rr-smoke" id="rocketSmoke"></div>
+            </div>
+            <div class="skyline" aria-hidden="true"></div>
+          </div>
         </div>
       </div>
     </section>
@@ -290,12 +352,12 @@
         <div class="card">
           <h3>Controls</h3>
           <ul class="list">
-            <li>🪐 Planets: tap planets, do quick quiz</li>
-            <li>🚀 Rocket Launch: hold fuel, then launch</li>
-            <li>🛸 Aliens: start, then tap aliens quickly</li>
-            <li>☄️ Meteors: start, then tap falling meteors</li>
-            <li>📸 NASA Pics: today/random + read-aloud</li>
-            <li>🛰️ ISS: ping + auto mode</li>
+            <li>🪐 Planets: tap planets + discover + stats</li>
+            <li>🛰️ ISS: ping + auto mode + learn what it is</li>
+            <li>🧩 Docking: align and approach slowly</li>
+            <li>📸 NASA: today/random + read-aloud</li>
+            <li>🎯 Missions: goals that “stick”</li>
+            <li>🚀 Rocket: fuel + launch</li>
             <li>🧠 Quiz: multiple choice streaks</li>
           </ul>
           <div class="row">
@@ -303,6 +365,19 @@
           </div>
         </div>
       </div>
+    </section>
+
+    <!-- LEGACY PANELS (kept so current app.js doesn’t crash; hidden by lack of tabs) -->
+    <section class="panel" id="tab-aliens" style="display:none;">
+      <button id="alienStart"></button><button id="alienHard"></button><button id="alienEasy"></button>
+      <div id="alienMsg"></div><span id="alienFound"></span><span id="alienTime"></span><span id="alienStreak"></span>
+      <div id="arena"></div>
+    </section>
+
+    <section class="panel" id="tab-meteors" style="display:none;">
+      <button id="meteorStart"></button><button id="meteorStop"></button><button id="meteorBoost"></button>
+      <div id="meteorMsg"></div><span id="mCaught"></span><span id="mMissed"></span><span id="mBest"></span>
+      <div id="meteorField"></div>
     </section>
 
   </main>
