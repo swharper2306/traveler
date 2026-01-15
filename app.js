@@ -3,7 +3,7 @@ const KID_NAME = "Traveler";
 const SAVE_KEY = "traveler_space_arcade_v2"; // bump version so missions don't collide with old saves
 
 // NASA API key (DEMO_KEY is fine for testing; for reliability make a free key at api.nasa.gov)
-const NASA_KEY = "DEMO_KEY";
+const NASA_KEY = "EY0x32jlX2stzDdedqe67P77g0qDefQnGiH8T8NE";
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
