@@ -5,6 +5,12 @@ const SAVE_KEY = "traveler_space_arcade_v2"; // bump version so missions don't c
 // NASA API key (DEMO_KEY is fine for testing; for reliability make a free key at api.nasa.gov)
 const NASA_KEY = "EY0x32jlX2stzDdedqe67P77g0qDefQnGiH8T8NE";
 
+const ISS_PHOTOS = [
+  "./assets/images/iss1.webp",
+  "./assets/images/iss2.webp",
+  "./assets/images/iss3.jpg",
+];
+
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
 const clamp = (n,a,b) => Math.max(a, Math.min(b, n));
@@ -12,6 +18,23 @@ const rand = (a,b) => a + Math.random()*(b-a);
 
 let soundOn = true;
 let ttsOn = true;
+
+function setupIssPhotos(){
+  const img = document.getElementById("issPhoto");
+  if(!img) return;
+
+  // Pick a random one when the site loads
+  const pick = ISS_PHOTOS[(Math.random() * ISS_PHOTOS.length) | 0];
+  img.src = pick;
+
+  // Tap to cycle photos (kid-friendly)
+  img.style.cursor = "pointer";
+  img.title = "Tap to change the ISS photo";
+  img.addEventListener("click", ()=>{
+    const next = ISS_PHOTOS[(Math.random() * ISS_PHOTOS.length) | 0];
+    img.src = next;
+  });
+}
 
 // ---------- SAVE ----------
 const state = loadState();
@@ -1352,6 +1375,8 @@ function init(){
   setupIss();
   setupQuiz();
   setupMissions();
+  setupIssPhotos();
+
 
   // disco button (simple class toggle)
   const disco = document.createElement("button");
