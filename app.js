@@ -781,6 +781,7 @@ function setupDocking(){
 
   function bump(){
     dockOn = false;
+    document.body.classList.remove("docking-on");
     if(msgEl) msgEl.textContent = "BUMP! Too fast. Try slower! 🐢";
     beep(180,0.09,"sawtooth");
     confetti(10);
@@ -790,6 +791,7 @@ function setupDocking(){
 
   function win(){
     dockOn = false;
+    document.body.classList.remove("docking-on");
     const t = (performance.now() - dockStartTime) / 1000;
     if(msgEl) msgEl.textContent = `DOCKED! 🧩 Great job! Time: ${t.toFixed(1)}s`;
     say("Docking complete! Great job!");
@@ -851,7 +853,9 @@ function setupDocking(){
 
   function start(){
     reset();
+    document.body.classList.remove("docking-on");
     dockOn = true;
+    document.body.classList.add("docking-on");
     dockStartTime = performance.now();
     if(msgEl) msgEl.textContent = "Docking started! Line up and go slow near the end!";
     say("Docking started. Line up, and go slow.");
