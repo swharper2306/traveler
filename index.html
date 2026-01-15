@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Traveler’s Space Arcade 🚀</title>
+  <meta name="description" content="A space-themed arcade for Traveler: planets, aliens, meteors, badges." />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <canvas id="bg" aria-hidden="true"></canvas>
+
+  <header class="top">
+    <div class="brand">
+      <div class="emoji">🪐</div>
+      <div>
+        <div class="title">Traveler’s Space Arcade</div>
+        <div class="sub" id="subline">Booting up…</div>
+      </div>
+    </div>
+
+    <div class="hud">
+      <button id="soundBtn" class="chip">🔊 Sound: ON</button>
+      <button id="ttsBtn" class="chip">🗣️ Read: ON</button>
+      <div class="scoreBox">⭐ <span id="stars">0</span></div>
+      <div class="scoreBox">🏅 <span id="badges">0</span></div>
+    </div>
+  </header>
+
+  <nav class="tabs" aria-label="Games">
+    <button class="tab active" data-tab="planets">🪐 Planets</button>
+    <button class="tab" data-tab="aliens">🛸 Alien Hunt</button>
+    <button class="tab" data-tab="meteors">☄️ Meteor Catch</button>
+    <button class="tab" data-tab="trophy">🏆 Trophy Room</button>
+  </nav>
+
+  <main class="wrap">
+
+    <!-- PLANETS -->
+    <section class="panel active" id="tab-planets">
+      <div class="panelHead">
+        <h2>Planet Explorer</h2>
+        <div class="panelHint">Tap a planet ➜ fun facts + voice + rewards</div>
+      </div>
+
+      <div class="grid2">
+        <div class="card">
+          <div class="planetRow" id="planetRow"></div>
+          <div class="bigPlanet" id="bigPlanet" aria-label="Planet display"></div>
+        </div>
+
+        <div class="card">
+          <h3 id="planetName">Pick a planet!</h3>
+          <p class="fact" id="planetFact">Tap a planet on the left. Traveler earns ⭐ for exploring!</p>
+          <div class="row">
+            <button class="btn" id="randomPlanet">🎲 Random Planet</button>
+            <button class="btn" id="planetQuiz">🧠 Quick Quiz</button>
+          </div>
+          <div class="note" id="planetNote">Tip: Try Saturn 🪐 or Mars 🔴</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ALIENS -->
+    <section class="panel" id="tab-aliens">
+      <div class="panelHead">
+        <h2>Alien Hide-and-Seek</h2>
+        <div class="panelHint">Tap aliens fast before they teleport!</div>
+      </div>
+
+      <div class="grid2">
+        <div class="card">
+          <div class="row">
+            <button class="btn" id="alienStart">▶️ Start</button>
+            <button class="btn" id="alienHard">🔥 Harder</button>
+            <button class="btn" id="alienEasy">😌 Easier</button>
+          </div>
+          <div class="note" id="alienMsg">Press Start to begin hunting!</div>
+          <div class="statsRow">
+            <div class="pill">👽 Found: <span id="alienFound">0</span></div>
+            <div class="pill">⏱️ Time: <span id="alienTime">0</span>s</div>
+            <div class="pill">🔥 Streak: <span id="alienStreak">0</span></div>
+          </div>
+        </div>
+
+        <div class="card arenaCard">
+          <div class="arena" id="arena" aria-label="Alien arena"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- METEORS -->
+    <section class="panel" id="tab-meteors">
+      <div class="panelHead">
+        <h2>Meteor Catch</h2>
+        <div class="panelHint">Tap meteors before they hit the ground!</div>
+      </div>
+
+      <div class="grid2">
+        <div class="card">
+          <div class="row">
+            <button class="btn" id="meteorStart">▶️ Start</button>
+            <button class="btn" id="meteorStop">⏹️ Stop</button>
+            <button class="btn" id="meteorBoost">⚡ Turbo</button>
+          </div>
+          <div class="statsRow">
+            <div class="pill">☄️ Caught: <span id="mCaught">0</span></div>
+            <div class="pill">💥 Missed: <span id="mMissed">0</span></div>
+            <div class="pill">🏆 Best: <span id="mBest">0</span></div>
+          </div>
+          <div class="note" id="meteorMsg">Start the game and tap falling meteors!</div>
+        </div>
+
+        <div class="card arenaCard">
+          <div class="meteorField" id="meteorField" aria-label="Meteor field"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TROPHIES -->
+    <section class="panel" id="tab-trophy">
+      <div class="panelHead">
+        <h2>Trophy Room</h2>
+        <div class="panelHint">Traveler’s badges unlock as he plays</div>
+      </div>
+
+      <div class="grid2">
+        <div class="card">
+          <h3>Badges</h3>
+          <div class="badgeGrid" id="badgeGrid"></div>
+          <div class="note">Badges save on this device (so it remembers Traveler).</div>
+        </div>
+
+        <div class="card">
+          <h3>Controls</h3>
+          <ul class="list">
+            <li>🪐 Planets: tap planets, do quick quiz</li>
+            <li>🛸 Aliens: start, then tap aliens quickly</li>
+            <li>☄️ Meteors: start, then tap falling meteors</li>
+          </ul>
+          <div class="row">
+            <button class="btn danger" id="resetAll">♻️ Reset Everything</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="foot">Made for Traveler 🚀 — Space Arcade Edition</footer>
+
+  <script src="./app.js"></script>
+</body>
+</html>
