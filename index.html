@@ -37,6 +37,8 @@
     <button class="tab" data-tab="iss">🛰️ ISS Tracker</button>
     <button class="tab" data-tab="dock">🧩 ISS Docking</button>
     <button class="tab" data-tab="nasa">📸 NASA Pics</button>
+    <button class="tab" data-tab="builder">🧩 Rocket Builder</button>
+    <button class="tab" data-tab="pets">🧑‍🚀 Space Pets</button>
     <button class="tab" data-tab="missions">🎯 Missions</button>
     <button class="tab" data-tab="rocket">🚀 Rocket Launch</button>
     <button class="tab" data-tab="quiz">🧠 Space Quiz</button>
@@ -297,6 +299,69 @@
         </div>
       </div>
     </section>
+<!-- ROCKET BUILDER -->
+<section class="panel" id="tab-builder">
+  <div class="panelHead">
+    <h2>Build-a-Rocket Lab</h2>
+    <div class="panelHint">Drag parts onto the rocket, then launch!</div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h3>Rocket Parts</h3>
+      <p class="fact">Drag a part onto the matching spot: Nose, Body, Fins, Engine.</p>
+
+      <div class="parts" id="rocketParts"></div>
+
+      <div class="row" style="margin-top:10px;">
+        <button class="btn" id="rbSurprise">🎲 Surprise Rocket</button>
+        <button class="btn primary" id="rbLaunch">🚀 Launch My Rocket</button>
+        <button class="btn danger" id="rbReset">♻️ Reset</button>
+      </div>
+
+      <div class="note" id="rbMsg">Build a rocket to earn ⭐ and unlock badges.</div>
+    </div>
+
+    <div class="card arenaCard">
+      <div class="rocketLab" id="rocketLab">
+        <div class="rocketSilhouette" id="rocketSilhouette">
+          <div class="slot slot-nose" data-slot="nose"><span>Nose</span></div>
+          <div class="slot slot-body" data-slot="body"><span>Body</span></div>
+          <div class="slot slot-fins" data-slot="fins"><span>Fins</span></div>
+          <div class="slot slot-engine" data-slot="engine"><span>Engine</span></div>
+          <div class="built" id="builtRocket"></div>
+        </div>
+        <div class="launchSky" id="launchSky"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SPACE PET COLLECTOR -->
+<section class="panel" id="tab-pets">
+  <div class="panelHead">
+    <h2>Space Pet Collector</h2>
+    <div class="panelHint">Earn pets by playing and answering quiz questions</div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h3>Your Crew</h3>
+      <p class="fact">Collect silly space animals. They stay unlocked forever!</p>
+
+      <div class="row">
+        <button class="btn primary" id="petAdopt">🧲 Adopt a Mystery Pet (5⭐)</button>
+        <button class="btn" id="petFeed">🍪 Feed Pet</button>
+      </div>
+
+      <div class="note" id="petMsg">Tip: Get 3 quiz answers right to unlock a pet!</div>
+    </div>
+
+    <div class="card">
+      <div class="petGrid" id="petGrid"></div>
+    </div>
+  </div>
+</section>
 
     <!-- SPACE QUIZ -->
     <section class="panel" id="tab-quiz">
@@ -391,4 +456,3 @@
   <script src="./app.js"></script>
 </body>
 </html>
-
