@@ -700,4 +700,107 @@ body.docking-on #dockShip::after{
 .issIcon{
   filter: drop-shadow(0 14px 20px rgba(0,0,0,.55));
 }
+/* =========================
+   Rocket Builder (Traveler)
+   ========================= */
+.parts{
+  display:grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap:10px;
+  margin-top:12px;
+}
+@media (min-width: 600px){
+  .parts{ grid-template-columns: repeat(4, 1fr); }
+}
+.part{
+  border:1px solid rgba(255,255,255,.14);
+  background: rgba(0,0,0,.18);
+  border-radius: 14px;
+  padding: 10px;
+  cursor: grab;
+  font-weight: 950;
+  text-align:center;
+  user-select:none;
+}
+.part:active{ cursor: grabbing; transform: scale(.99); }
+.part small{ display:block; opacity:.85; font-weight:850; margin-top:4px; }
+
+.rocketLab{
+  position:relative;
+  height: 360px;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: radial-gradient(800px 260px at 30% 30%, rgba(96,165,250,.12), transparent 60%),
+              rgba(0,0,0,.18);
+  overflow:hidden;
+}
+.rocketSilhouette{
+  position:absolute;
+  left:50%;
+  top:18px;
+  transform:translateX(-50%);
+  width:170px;
+  height:320px;
+  border-radius: 999px;
+  border: 1px dashed rgba(255,255,255,.18);
+  background: rgba(255,255,255,.03);
+}
+.slot{
+  position:absolute;
+  left:50%;
+  transform:translateX(-50%);
+  width: 140px;
+  border-radius: 14px;
+  border:1px solid rgba(255,255,255,.12);
+  background: rgba(0,0,0,.16);
+  display:grid;
+  place-items:center;
+  font-weight: 950;
+}
+.slot span{ font-size: 12px; opacity:.85; }
+.slot-nose{ top:16px; height:56px; }
+.slot-body{ top:84px; height:100px; }
+.slot-fins{ top:196px; height:62px; }
+.slot-engine{ top:270px; height:42px; }
+.slot.good{ border-color: rgba(34,197,94,.45); background: rgba(34,197,94,.10); }
+.slot.bad{ border-color: rgba(251,113,133,.45); background: rgba(251,113,133,.10); }
+
+.built{ position:absolute; inset:0; pointer-events:none; }
+.built .piece{
+  position:absolute;
+  left:50%;
+  transform:translateX(-50%);
+  font-size: 44px;
+  filter: drop-shadow(0 18px 30px rgba(0,0,0,.55));
+}
+.built .p-nose{ top:18px; }
+.built .p-body{ top:98px; }
+.built .p-fins{ top:198px; }
+.built .p-engine{ top:268px; }
+
+.launchSky{ position:absolute; inset:0; pointer-events:none; }
+.launchSky .spark{ position:absolute; font-size:18px; opacity:.9; }
+
+/* =========================
+   Space Pet Collector
+   ========================= */
+.petGrid{
+  display:grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap:10px;
+}
+@media (min-width: 600px){
+  .petGrid{ grid-template-columns: repeat(3, 1fr); }
+}
+.petCard{
+  border:1px solid rgba(255,255,255,.12);
+  background: rgba(0,0,0,.16);
+  border-radius: 16px;
+  padding: 10px;
+  min-height: 90px;
+}
+.petCard.locked{ opacity:.55; filter: grayscale(1); }
+.petEmoji{ font-size:34px; margin-bottom:4px; }
+.petName{ font-weight: 950; }
+.petMeta{ font-size:12px; opacity:.85; font-weight:850; }
 
