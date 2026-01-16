@@ -53,8 +53,10 @@ function loadState(){
     s.missions ??= {};     // mission completion flags
     s.planetSeen ??= {};   // track unique planets explored
     s.quizBestStreak ??= 0;
+    s.rocketBuild ??= { nose:null, body:null, fins:null, engine:null };
+    s.pets ??= { owned:{}, active:null, feedCount:0, unlockScore:0 };
     return s;
-  }catch{
+    }catch{
     return {
       stars: 0,
       badges: {},
@@ -63,9 +65,14 @@ function loadState(){
       bestDock: 0,
       missions: {},
       planetSeen: {},
-      quizBestStreak: 0
+      quizBestStreak: 0,
+
+      // NEW modules
+      rocketBuild: { nose:null, body:null, fins:null, engine:null },
+      pets: { owned:{}, active:null, feedCount:0, unlockScore:0 }
     };
   }
+
 }
 function save(){
   localStorage.setItem(SAVE_KEY, JSON.stringify(state));
@@ -1050,6 +1057,8 @@ function answerQuestion(chosenIdx, btn){
     btn.classList.add("correct");
     qScore++; qStreak++;
     state.quizBestStreak = Math.max(state.quizBestStreak || 0, qStreak);
+    
+    unlockPetByScore();
 
     const starGain = (qStreak >= 5 ? 3 : 1);
     qStars += starGain;
@@ -1060,7 +1069,7 @@ function answerQuestion(chosenIdx, btn){
     $("#qMsg").textContent = qStreak >= 5
       ? `SUPER STREAK! 🔥 ${qStreak} in a row!`
       : "Correct! ⭐";
-
+     
     if(qStreak >= 8) unlock("quizstreak","🔥 Quiz Hot Streak","Got 8 quiz answers in a row");
     if(qScore === 1) unlock("quiz","🧠 Planet Brain","Got a quiz right");
 
@@ -1433,6 +1442,255 @@ function setupMeteors(){
   if(!$("#meteorStart")) return;
   // legacy listeners remain if panel exists
 }
+// =========================================================
+// Rocket Builder
+// =========================================================
+const ROCKET_PARTS = {
+  nose: [
+    {id:"nose_cone", name:"Pointy Cone", emoji:"🔺"},
+    {id:"nose_capsule", name:"Capsule", emoji:"🛰️"}
+  ],
+  body: [
+    {id:"body_tank", name:"Fuel Tank", emoji:"🛢️"},
+    {id:"body_lab", name:"Lab Module", emoji:"🧪"}
+  ],
+  fins: [
+    {id:"fins_wings", name:"Wings", emoji:"🪽"},
+    {id:"fins_bolt", name:"Stabilizers", emoji:"🔩"}
+  ],
+  engine: [
+    {id:"engine_fire", name:"Flame Engine", emoji:"🔥"},
+    {id:"engine_ion", name:"Ion Drive", emoji:"⚡"}
+  ]
+};
+
+function setupRocketBuilder(){
+  const partsWrap = $("#rocketParts");
+  if(!partsWrap) return;
+
+  // render draggable parts
+  partsWrap.innerHTML = "";
+  for(const slot of Object.keys(ROCKET_PARTS)){
+    for(const part of ROCKET_PARTS[slot]){
+      const el = document.createElement("div");
+      el.className = "part";
+      el.draggable = true;
+      el.dataset.slot = slot;
+      el.dataset.emoji = part.emoji;
+      el.dataset.pid = part.id;
+      el.innerHTML = `${part.emoji} ${part.name}<small>${slot.toUpperCase()}</small>`;
+      el.addEventListener("dragstart", (e)=>{
+        e.dataTransfer?.setData("text/plain", JSON.stringify({slot, emoji:part.emoji, pid:part.id}));
+        beep(660,0.05,"triangle");
+      });
+      partsWrap.appendChild(el);
+    }
+  }
+
+  // slot drop targets
+  $$("#rocketSilhouette .slot").forEach(slotEl=>{
+    slotEl.addEventListener("dragover", (e)=>{ e.preventDefault(); slotEl.classList.add("good"); });
+    slotEl.addEventListener("dragleave", ()=> slotEl.classList.remove("good"));
+    slotEl.addEventListener("drop", (e)=>{
+      e.preventDefault();
+      slotEl.classList.remove("good");
+      let data=null;
+      try{ data = JSON.parse(e.dataTransfer?.getData("text/plain") || "null"); }catch{}
+      if(!data) return;
+
+      const want = slotEl.dataset.slot;
+      if(data.slot !== want){
+        slotEl.classList.add("bad");
+        $("#rbMsg").textContent = `Oops — that part goes on ${data.slot.toUpperCase()}!`;
+        beep(180,0.08,"sawtooth");
+        setTimeout(()=>slotEl.classList.remove("bad"), 450);
+        return;
+      }
+      state.rocketBuild[want] = data;
+      $("#rbMsg").textContent = `Nice! ${want.toUpperCase()} installed.`;
+      beep(520,0.06,"square");
+      save();
+      renderRocketBuilder();
+    });
+  });
+
+  $("#rbSurprise")?.addEventListener("click", ()=>{
+    for(const slot of Object.keys(ROCKET_PARTS)){
+      const pick = ROCKET_PARTS[slot][(Math.random()*ROCKET_PARTS[slot].length)|0];
+      state.rocketBuild[slot] = {slot, emoji:pick.emoji, pid:pick.id};
+    }
+    $("#rbMsg").textContent = "Surprise rocket ready! 🚀";
+    confetti(18);
+    save();
+  });
+
+  $("#rbReset")?.addEventListener("click", ()=>{
+    state.rocketBuild = { nose:null, body:null, fins:null, engine:null };
+    $("#rbMsg").textContent = "Reset done. Build again!";
+    save();
+  });
+
+  $("#rbLaunch")?.addEventListener("click", ()=>{
+    const rb = state.rocketBuild;
+    const complete = rb.nose && rb.body && rb.fins && rb.engine;
+    if(!complete){
+      $("#rbMsg").textContent = "Add all 4 parts before launching!";
+      beep(180,0.08,"sawtooth");
+      return;
+    }
+    // quick launch animation
+    const built = $("#builtRocket");
+    const sky = $("#launchSky");
+    if(built){
+      built.animate([{transform:"translateY(0)"},{transform:"translateY(-420px)"}],
+        {duration:1200, easing:"cubic-bezier(.2,.8,.2,1)"});
+    }
+    if(sky){
+      for(let i=0;i<18;i++){
+        const s=document.createElement("div");
+        s.className="spark";
+        s.textContent = ["✨","⭐","💥","🌟"][i%4];
+        s.style.left = (45 + Math.random()*20) + "%";
+        s.style.top  = (70 + Math.random()*20) + "%";
+        sky.appendChild(s);
+        s.animate([{transform:"translateY(0)", opacity:1},{transform:"translateY(60px)", opacity:0}],
+          {duration:900+Math.random()*500, easing:"ease-out", fill:"forwards"});
+        setTimeout(()=>s.remove(), 1600);
+      }
+    }
+
+    addStars(6);
+    unlock("builder","🧩 Rocket Engineer","Built and launched a complete rocket");
+    $("#rbMsg").textContent = "LAUNCH SUCCESS! +6⭐ 🚀🌌";
+    confetti(30);
+  });
+
+  renderRocketBuilder();
+}
+
+function renderRocketBuilder(){
+  const built = $("#builtRocket");
+  if(!built) return;
+  built.innerHTML = "";
+  const rb = state.rocketBuild || {};
+  const add = (slot, cls) => {
+    const data = rb[slot];
+    if(!data) return;
+    const el = document.createElement("div");
+    el.className = `piece ${cls}`;
+    el.textContent = data.emoji;
+    built.appendChild(el);
+  };
+  add("nose","p-nose");
+  add("body","p-body");
+  add("fins","p-fins");
+  add("engine","p-engine");
+}
+
+// =========================================================
+// Space Pet Collector
+// =========================================================
+const PETS = [
+  {id:"astrofox", emoji:"🦊", name:"Astro Fox", how:"Get 3 quiz answers right"},
+  {id:"mooncati", emoji:"🐱", name:"Moon Cat", how:"Get 6 quiz answers right"},
+  {id:"nebulaowl", emoji:"🦉", name:"Nebula Owl", how:"Get 10 quiz answers right"},
+  {id:"cometdog", emoji:"🐶", name:"Comet Dog", how:"Adopt with ⭐"}
+];
+
+function setupPets(){
+  if(!$("#petGrid")) return;
+
+  $("#petAdopt")?.addEventListener("click", ()=>{
+    if(state.stars < 5){
+      $("#petMsg").textContent = "Need 5⭐ to adopt!";
+      beep(180,0.08,"sawtooth");
+      return;
+    }
+    const locked = PETS.filter(p=>!state.pets.owned[p.id]);
+    if(locked.length === 0){
+      $("#petMsg").textContent = "You already have ALL the pets! 🏆";
+      confetti(20);
+      return;
+    }
+    state.stars -= 5;
+    const pick = locked[(Math.random()*locked.length)|0];
+    state.pets.owned[pick.id] = true;
+    state.pets.active = pick.id;
+    $("#petMsg").textContent = `You adopted ${pick.name}!`;
+    confetti(22);
+    save();
+    checkPetBadges();
+  });
+
+  $("#petFeed")?.addEventListener("click", ()=>{
+    const active = state.pets.active;
+    if(!active){
+      $("#petMsg").textContent = "Adopt a pet first!";
+      beep(180,0.08,"sawtooth");
+      return;
+    }
+    state.pets.feedCount = (state.pets.feedCount||0) + 1;
+    addStars(1);
+    $("#petMsg").textContent = "Yum! Your pet is happy. +1⭐";
+    beep(660,0.06,"triangle");
+    renderPets();
+  });
+
+  renderPets();
+}
+
+function renderPets(){
+  const grid = $("#petGrid");
+  if(!grid) return;
+  grid.innerHTML = "";
+
+  for(const p of PETS){
+    const owned = !!state.pets.owned[p.id];
+    const card = document.createElement("div");
+    card.className = "petCard" + (owned ? "" : " locked");
+    card.innerHTML = `
+      <div class="petEmoji">${owned ? p.emoji : "❓"}</div>
+      <div class="petName">${owned ? p.name : "Locked"}</div>
+      <div class="petMeta">${owned ? "Tap to select" : p.how}</div>
+    `;
+    if(owned){
+      card.style.cursor = "pointer";
+      card.addEventListener("click", ()=>{
+        state.pets.active = p.id;
+        $("#petMsg").textContent = `${p.name} is now your active pet!`;
+        beep(520,0.06,"square");
+        save();
+      });
+    }
+    grid.appendChild(card);
+  }
+}
+
+function unlockPetByScore(){
+  // called whenever quiz correct happens
+  state.pets.unlockScore = (state.pets.unlockScore||0) + 1;
+
+  const score = state.pets.unlockScore;
+  const autoUnlock = (score === 3) ? "astrofox" : (score === 6) ? "mooncati" : (score === 10) ? "nebulaowl" : null;
+  if(!autoUnlock) { save(); return; }
+  if(!state.pets.owned[autoUnlock]){
+    state.pets.owned[autoUnlock] = true;
+    state.pets.active = autoUnlock;
+    $("#petMsg") && ($("#petMsg").textContent = "New pet unlocked! Check Space Pets! 🐾");
+    unlock("pet3","🧑‍🚀 Space Zookeeper","Collected 3 space pets");
+    confetti(24);
+    beep(660,0.06,"triangle");
+  }
+  save();
+  checkPetBadges();
+}
+
+function checkPetBadges(){
+  const ownedCount = Object.keys(state.pets.owned||{}).length;
+  if(ownedCount >= 3){
+    unlock("pet3","🧑‍🚀 Space Zookeeper","Collected 3 space pets");
+  }
+}
 
 // ---------- INIT ----------
 function init(){
@@ -1449,6 +1707,8 @@ function init(){
   setupQuiz();
   setupMissions();
   setupIssPhotos();
+  setupRocketBuilder();
+  setupPets();
 
 
   // disco button (simple class toggle)
