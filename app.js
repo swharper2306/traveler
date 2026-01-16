@@ -921,25 +921,82 @@ function setupDocking(){
 // ================================
 // MULTIPLE CHOICE SPACE QUIZ
 // ================================
+// Bigger quiz pool + "no repeats until you finish the whole deck" behavior.
+// Tip: keep answers simple for a 6-year-old. ✅
 const QUIZ = [
+  // Basics
   { q:"What is the Sun?", a:["A planet","A star","A moon","A spaceship"], c:1 },
-  { q:"Which planet is the Red Planet?", a:["Mars","Neptune","Jupiter","Venus"], c:0 },
-  { q:"What do we call Earth’s moon?", a:["Luna","Sol","Titan","Phobos"], c:0 },
-  { q:"Which planet has rings?", a:["Earth","Saturn","Mercury","Mars"], c:1 },
-  { q:"Which planet is the biggest?", a:["Jupiter","Mars","Earth","Venus"], c:0 },
-  { q:"Where do astronauts live in space?", a:["ISS","Underwater","On the Sun","In a cave"], c:0 },
-  { q:"What do rockets push out to go up?", a:["Cookies","Exhaust gas","Clouds","Leaves"], c:1 },
-  { q:"What is a telescope for?", a:["Seeing far things","Cooking","Driving","Swimming"], c:0 },
-  { q:"Which planet is closest to the Sun?", a:["Mercury","Mars","Saturn","Neptune"], c:0 },
-  { q:"What is gravity?", a:["A pulling force","A snack","A song","A spaceship"], c:0 },
   { q:"What is the Moon?", a:["A planet","A star","A natural satellite","A rocket"], c:2 },
-  { q:"What is a comet?", a:["Icy space rock","A puppy","A plane","A volcano"], c:0 },
-  { q:"Which is a galaxy?", a:["Milky Way","Mount Everest","Pacific Ocean","Grand Canyon"], c:0 },
+  { q:"What do we call Earth’s moon?", a:["Luna","Sol","Titan","Phobos"], c:0 },
+  { q:"What is gravity?", a:["A pulling force","A snack","A song","A spaceship"], c:0 },
   { q:"What is an astronaut?", a:["Space explorer","Chef","Race car","Dinosaur"], c:0 },
+  { q:"What is a telescope for?", a:["Seeing far things","Cooking","Driving","Swimming"], c:0 },
+  { q:"What do rockets push out to go up?", a:["Cookies","Exhaust gas","Clouds","Leaves"], c:1 },
+
+  // Planets
+  { q:"Which planet is closest to the Sun?", a:["Mercury","Mars","Saturn","Neptune"], c:0 },
+  { q:"Which planet is the Red Planet?", a:["Mars","Neptune","Jupiter","Venus"], c:0 },
+  { q:"Which planet is the biggest?", a:["Jupiter","Mars","Earth","Venus"], c:0 },
+  { q:"Which planet has rings?", a:["Earth","Saturn","Mercury","Mars"], c:1 },
+  { q:"Which planet do we live on?", a:["Earth","Mars","Saturn","Neptune"], c:0 },
+  { q:"Which planet is famous for big red storms?", a:["Jupiter","Mercury","Venus","Earth"], c:0 },
+  { q:"Which planet is called the 'Blue Planet'?", a:["Neptune","Mars","Mercury","Venus"], c:0 },
+  { q:"Which planet is very hot with thick clouds?", a:["Venus","Neptune","Mars","Saturn"], c:0 },
+  { q:"Which planet is icy and far away?", a:["Neptune","Mercury","Earth","Venus"], c:0 },
+  { q:"Which planet is small and gray and closest to the Sun?", a:["Mercury","Jupiter","Saturn","Mars"], c:0 },
+  { q:"Which planet has the most famous rings?", a:["Saturn","Earth","Mars","Mercury"], c:0 },
+  { q:"Which planet is sometimes called Earth's 'twin'?", a:["Venus","Neptune","Mars","Jupiter"], c:0 },
+  { q:"Which planet has lots of moons?", a:["Jupiter","Mercury","Earth","Mars"], c:0 },
+
+  // Space objects
+  { q:"What is a comet?", a:["Icy space rock","A puppy","A plane","A volcano"], c:0 },
+  { q:"What is an asteroid?", a:["Rock in space","A cookie","A cloud","A fish"], c:0 },
+  { q:"What is a galaxy?", a:["A huge group of stars","A sandwich","A mountain","A toy"], c:0 },
+  { q:"Which is a galaxy?", a:["Milky Way","Mount Everest","Pacific Ocean","Grand Canyon"], c:0 },
+  { q:"What is a crater?", a:["A hole from an impact","A space snack","A kind of cloud","A robot"], c:0 },
+  { q:"What is a shooting star?", a:["A meteor","A planet","A rocket","A moon"], c:0 },
+  { q:"What is a black hole?", a:["A place with super strong gravity","A dark planet","A space fish","A rocket"], c:0 },
+
+  // ISS / astronauts
+  { q:"Where do astronauts live in space?", a:["ISS","Underwater","On the Sun","In a cave"], c:0 },
+  { q:"What does ISS stand for?", a:["International Space Station","Inside Space Ship","Ice Snow Station","Invisible Star System"], c:0 },
+  { q:"What do astronauts wear outside?", a:["A spacesuit","A raincoat","Pajamas","A scuba suit"], c:0 },
+  { q:"Why do astronauts float in the ISS?", a:["Because they are in microgravity","Because of magnets","Because of wind","Because of water"], c:0 },
+
+  // Fun + kid-friendly
+  { q:"What is Saturn best known for?", a:["Rings","Oceans","Jungles","Volcanoes"], c:0 },
+  { q:"What is the Sun made of mostly?", a:["Hot gas","Rocks","Water","Ice cream"], c:0 },
+  { q:"What do we call a star explosion?", a:["Supernova","Super cookie","Mega splash","Star hiccup"], c:0 },
+  { q:"Which of these is NOT a planet?", a:["The Moon","Mars","Earth","Venus"], c:0 },
+  { q:"What do we call the path a planet follows?", a:["Orbit","Ribbon","Tunnel","Road"], c:0 },
+  { q:"What gives Earth day and night?", a:["Earth spinning","The Moon blinking","Clouds moving","Rockets"], c:0 },
+  { q:"How long is one Earth day?", a:["24 hours","5 hours","100 hours","1 hour"], c:0 },
+  { q:"What do we call a person who studies space?", a:["Astronomer","Astronaut","Chef","Pilot"], c:0 },
+  { q:"Which one is a rocket part?", a:["Engine","Sail","Wheels","Handlebars"], c:0 },
+  { q:"What do rockets launch from?", a:["Launch pad","Swimming pool","Tree house","Playground"], c:0 },
+
+  // More fun questions
+  { q:"What is the closest star to Earth?", a:["The Sun","Polaris","Sirius","Betelgeuse"], c:0 },
+  { q:"What do we call a big ball of rock in space?", a:["Asteroid","Cookie","Bubble","Rainbow"], c:0 },
+  { q:"What do we call a space rock that hits the ground?", a:["Meteorite","Moon","Starfish","Cloud"], c:0 },
+  { q:"What do astronauts breathe in a spacesuit?", a:["Oxygen","Smoke","Candy air","Water"], c:0 },
+  { q:"Which planet is famous for being super cold and blue?", a:["Neptune","Mercury","Venus","Mars"], c:0 },
+  { q:"What is a rover?", a:["Robot explorer","A comet","A moon","A ring"], c:0 },
+  { q:"Which planet is known for its giant rings and many moons?", a:["Saturn","Earth","Mercury","Mars"], c:0 },
+  { q:"What do we call the big explosion that started the universe?", a:["Big Bang","Big Pop","Mega Boom","Star Spark"], c:0 },
+  { q:"What is a constellation?", a:["A star pattern","A rocket","A planet","A telescope"], c:0 },
+  { q:"What do we call the place where the Moon goes around Earth?", a:["Orbit","Tunnel","Road","Slide"], c:0 },
+  { q:"Which one is NOT in our solar system?", a:["A dragon","The Sun","Mars","Saturn"], c:0 },
+  { q:"What do we call the spinning of Earth?", a:["Rotation","Teleporting","Melting","Bouncing"], c:0 },
+  { q:"What do we call Earth going around the Sun?", a:["Revolution","Vacation","Levitation","Hibernation"], c:0 },
+  { q:"What is the ISS mostly used for?", a:["Science experiments","Cooking pizza","Playing soccer","Making rainbows"], c:0 },
+  { q:"What do we call the bright lights in the sky at night?", a:["Stars","Buttons","Fireflies","Balloons"], c:0 },
 ];
 
 let qScore=0, qStreak=0, qStars=0;
 let currentQ=null;
+let quizDeck = [];
+let lastQuizIdx = -1;
 
 function shuffle(arr){
   for(let i=arr.length-1;i>0;i--){
@@ -949,8 +1006,24 @@ function shuffle(arr){
   return arr;
 }
 
+// No-repeat quiz picker:
+// We shuffle a deck of question indices and pop from it.
+// Only when the deck is empty do we reshuffle.
+function refillQuizDeck(){
+  quizDeck = shuffle([...Array(QUIZ.length).keys()]);
+  // Avoid the same question twice in a row across refills.
+  if(quizDeck.length > 1 && quizDeck[0] === lastQuizIdx){
+    const tmp = quizDeck[0];
+    quizDeck[0] = quizDeck[1];
+    quizDeck[1] = tmp;
+  }
+}
+
 function pickQuestion(){
-  currentQ = QUIZ[(Math.random()*QUIZ.length)|0];
+  if(quizDeck.length === 0) refillQuizDeck();
+  const idx = quizDeck.pop();
+  lastQuizIdx = idx;
+  currentQ = QUIZ[idx];
   $("#qText").textContent = currentQ.q;
   $("#qMsg").textContent = "Pick an answer!";
 
